@@ -156,16 +156,20 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const sendMessageToAI = async (userMessage: string) => {
     try {
-      const response = await fetch("/api/gemini", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message: userMessage }),
-      });
+      const { GoogleGenAI } = await import("@google/genai");
+      const { getApiKey } = await import("./services/geminiService");
+      
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        return "API Key is missing. Please set VITE_GEMINI_API_KEY2 in Vercel Environment Variables.";
+      }
 
-      const data = await response.json();
-      return data.text || "No response from AI.";
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: "gemini-3.1-pro-preview",
+        contents: userMessage,
+      });
+      return response.text || "No response from AI.";
     } catch (error) {
       console.error("Error:", error);
       return "Error getting response";

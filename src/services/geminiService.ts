@@ -1,3 +1,21 @@
+import { GoogleGenAI } from "@google/genai";
+
+export const getApiKey = () => {
+  try {
+    // @ts-ignore
+    if (import.meta.env.VITE_GEMINI_API_KEY2) return import.meta.env.VITE_GEMINI_API_KEY2;
+    // @ts-ignore
+    if (import.meta.env.VITE_GEMINI_API_KEY) return import.meta.env.VITE_GEMINI_API_KEY;
+  } catch (e) {}
+  try {
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY2) return process.env.GEMINI_API_KEY2;
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process.env && process.env.GEMINI_API_KEY) return process.env.GEMINI_API_KEY;
+  } catch (e) {}
+  return "";
+};
+
 export async function generateTeacherResponse(
   mode: string,
   input: string,
@@ -14,16 +32,17 @@ export async function generateTeacherResponse(
 IMPORTANT INSTRUCTIONS:
 If the mode is 'score' or 'correction', you MUST include the score in the exact format [SCORE: 85] (where 85 is the number) and weaknesses in the exact format [WEAKNESSES: grammar, vocabulary] anywhere in your response. Do not use any other format for these two specific fields.`;
   
-  const response = await fetch("/api/gemini", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ message: prompt }),
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || "Failed to generate response");
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please set VITE_GEMINI_API_KEY2 in Vercel Environment Variables.");
   }
-  return data.text || "";
+
+  const ai = new GoogleGenAI({ apiKey });
+  const response = await ai.models.generateContent({
+    model: "gemini-3.1-pro-preview",
+    contents: prompt,
+  });
+  
+  return response.text || "";
 }
+
