@@ -20,6 +20,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "server.ts"],
+  "include": ["src", "server.ts", "gemini.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

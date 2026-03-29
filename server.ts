@@ -1,9 +1,9 @@
 // Trigger save state
 import express from "express";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
 import path from "path";
 import archiver from "archiver";
+import geminiHandler from "./gemini.js";
 
 async function startServer() {
   const app = express();
@@ -51,20 +51,7 @@ async function startServer() {
     archive.finalize();
   });
 
-  app.post("/api/gemini", async (req, res) => {
-    try {
-      const { message } = req.body;
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY2 });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: message,
-      });
-      res.json({ text: response.text });
-    } catch (error: any) {
-      console.error("Gemini API Error:", error);
-      res.status(500).json({ error: error.message || "Something went wrong" });
-    }
-  });
+  app.post("/api/gemini", geminiHandler);
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {

@@ -1,24 +1,23 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 export default async function handler(req: any, res: any) {
   try {
-    const genAI = new GoogleGenerativeAI(process.env.VITE_GEMINI_API_KEY!);
-
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-    });
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY2 });
 
     const { message } = req.body;
 
-    const result = await model.generateContent(message);
-    const response = await result.response;
+    const response = await ai.models.generateContent({
+      model: "gemini-3.1-pro-preview",
+      contents: message,
+    });
 
     res.status(200).json({
-      text: response.text(),
+      text: response.text,
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Gemini API Error:", error);
     res.status(500).json({
-      error: "Something went wrong",
+      error: error.message || "Something went wrong",
     });
   }
 }
