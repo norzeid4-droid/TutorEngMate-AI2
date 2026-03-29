@@ -166,7 +166,7 @@ export default function App() {
 
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-3-flash-preview",
         contents: userMessage,
       });
       return response.text || "No response from AI.";

@@ -39,7 +39,7 @@ If the mode is 'score' or 'correction', you MUST include the score in the exact 
 
   const ai = new GoogleGenAI({ apiKey });
   const response = await ai.models.generateContent({
-    model: "gemini-3.1-pro-preview",
+    model: "gemini-3-flash-preview",
     contents: prompt,
   });
   
