@@ -1,0 +1,60 @@
+{
+  "entities": {
+    "TeacherProfile": {
+      "title": "TeacherProfile",
+      "description": "Profile information for a teacher.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Teacher's name" },
+        "email": { "type": "string", "format": "email", "description": "Teacher's email address" },
+        "country": { "type": "string", "description": "Teacher's country" },
+        "teachingType": { "type": "string", "description": "Type of teaching (e.g., School, Online)" },
+        "curriculum": { "type": "string", "description": "Curriculum taught" },
+        "levels": { "type": "array", "items": { "type": "string" }, "description": "Student levels taught" },
+        "skills": { "type": "array", "items": { "type": "string" }, "description": "Main skills taught" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["name", "email", "country", "teachingType", "curriculum", "levels", "skills"]
+    },
+    "Student": {
+      "title": "Student",
+      "description": "A student profile managed by a teacher.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Student's name" },
+        "level": { "type": "string", "description": "Student's level" },
+        "curriculum": { "type": "string", "description": "Student's curriculum" },
+        "weaknesses": { "type": "array", "items": { "type": "string" }, "description": "Detected weaknesses" },
+        "notes": { "type": "string", "description": "Teacher notes" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["name", "level", "curriculum"]
+    },
+    "WritingEntry": {
+      "title": "WritingEntry",
+      "description": "A writing entry and its evaluation for a student.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date-time", "description": "Date of the entry" },
+        "originalText": { "type": "string", "description": "Original student text" },
+        "score": { "type": "number", "description": "Calculated score" },
+        "feedback": { "type": "string", "description": "AI generated feedback" }
+      },
+      "required": ["date", "originalText", "score", "feedback"]
+    }
+  },
+  "firestore": {
+    "/teachers/{userId}": {
+      "schema": { "$ref": "#/entities/TeacherProfile" },
+      "description": "Teacher profiles, keyed by Firebase Auth UID."
+    },
+    "/teachers/{userId}/students/{studentId}": {
+      "schema": { "$ref": "#/entities/Student" },
+      "description": "Students belonging to a specific teacher."
+    },
+    "/teachers/{userId}/students/{studentId}/history/{historyId}": {
+      "schema": { "$ref": "#/entities/WritingEntry" },
+      "description": "Writing history entries for a specific student."
+    }
+  }
+}

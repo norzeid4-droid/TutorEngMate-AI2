@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    function validStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+    
+    function isValidEmail(email) {
+      return email is string &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+    
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    
+    function isValidTeacherProfile() {
+      return hasRequiredFields(['name', 'email', 'country', 'teachingType', 'curriculum', 'levels', 'skills']) &&
+             validStringLength('name', 1, 100) &&
+             isValidEmail(request.resource.data.email) &&
+             validStringLength('country', 1, 100) &&
+             validStringLength('teachingType', 1, 50) &&
+             validStringLength('curriculum', 1, 100) &&
+             request.resource.data.levels is list && request.resource.data.levels.size() <= 20 &&
+             request.resource.data.skills is list && request.resource.data.skills.size() <= 20;
+    }
+    
+    function isValidChatSession() {
+      return hasRequiredFields(['title', 'updatedAt', 'messages']) &&
+             request.resource.data.title is string && request.resource.data.title.size() <= 100 &&
+             request.resource.data.updatedAt is string &&
+             request.resource.data.messages is list && request.resource.data.messages.size() <= 1000;
+    }
+    
+    function isValidStudent() {
+      return hasRequiredFields(['name', 'level', 'curriculum']) &&
+             validStringLength('name', 1, 100) &&
+             validStringLength('level', 1, 50) &&
+             validStringLength('curriculum', 1, 100) &&
+             (!('weaknesses' in request.resource.data) || (request.resource.data.weaknesses is list && request.resource.data.weaknesses.size() <= 50)) &&
+             (!('notes' in request.resource.data) || (request.resource.data.notes is string && request.resource.data.notes.size() <= 5000)) &&
+             (!('history' in request.resource.data) || (request.resource.data.history is list && request.resource.data.history.size() <= 1000));
+    }
+    
+    function isValidWritingEntry() {
+      return hasRequiredFields(['date', 'originalText', 'score', 'feedback']) &&
+             request.resource.data.date is string &&
+             request.resource.data.originalText is string && request.resource.data.originalText.size() <= 20000 &&
+             request.resource.data.score is number &&
+             request.resource.data.feedback is string && request.resource.data.feedback.size() <= 20000;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    
+    match /teachers/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidTeacherProfile();
+      allow update: if isOwner(userId) && isValidTeacherProfile();
+      allow delete: if isOwner(userId);
+      
+      match /chats/{chatId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidChatSession();
+        allow update: if isOwner(userId) && isValidChatSession();
+        allow delete: if isOwner(userId);
+      }
+      
+      match /students/{studentId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidStudent();
+        allow update: if isOwner(userId) && isValidStudent();
+        allow delete: if isOwner(userId);
+        
+        match /history/{historyId} {
+          allow read: if isOwner(userId);
+          allow create: if isOwner(userId) && isValidWritingEntry();
+          allow update: if isOwner(userId) && isValidWritingEntry();
+          allow delete: if isOwner(userId);
+        }
+      }
+    }
+  }
+}
