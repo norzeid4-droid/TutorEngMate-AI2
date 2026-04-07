@@ -10,6 +10,10 @@
         "country": { "type": "string", "description": "Teacher's country" },
         "teachingType": { "type": "string", "description": "Type of teaching (e.g., School, Online)" },
         "curriculum": { "type": "string", "description": "Curriculum taught" },
+        "schoolCountry": { "type": "string", "description": "School country" },
+        "schoolCurriculumType": { "type": "string", "description": "School curriculum type" },
+        "schoolGrade": { "type": "string", "description": "School grade" },
+        "schoolCEFR": { "type": "string", "description": "School CEFR level" },
         "levels": { "type": "array", "items": { "type": "string" }, "description": "Student levels taught" },
         "skills": { "type": "array", "items": { "type": "string" }, "description": "Main skills taught" },
         "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
@@ -24,6 +28,10 @@
         "name": { "type": "string", "description": "Student's name" },
         "level": { "type": "string", "description": "Student's level" },
         "curriculum": { "type": "string", "description": "Student's curriculum" },
+        "schoolCountry": { "type": "string", "description": "School country" },
+        "schoolCurriculumType": { "type": "string", "description": "School curriculum type" },
+        "schoolGrade": { "type": "string", "description": "School grade" },
+        "schoolCEFR": { "type": "string", "description": "School CEFR level" },
         "weaknesses": { "type": "array", "items": { "type": "string" }, "description": "Detected weaknesses" },
         "notes": { "type": "string", "description": "Teacher notes" },
         "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }

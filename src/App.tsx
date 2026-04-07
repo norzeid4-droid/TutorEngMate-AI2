@@ -64,6 +64,10 @@ const PAGES: PageDef[] = [
 
 const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Primary', 'Prep', 'Secondary'];
 const CURRICULA = [
+  'School / National / International Curriculum',
+  'General English',
+  'Conversation',
+  'Business English',
   'National Curriculum (Egypt/General)',
   'Saudi Curriculum (Ministry of Education)',
   'UAE Curriculum (Ministry of Education)',
@@ -137,9 +141,19 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<PageId>('dashboard');
   const [level, setLevel] = useState<string>(LEVELS[2]);
   const [curriculum, setCurriculum] = useState<string>(CURRICULA[0]);
+  const [schoolCountry, setSchoolCountry] = useState<string>('Egypt');
+  const [schoolCurriculumType, setSchoolCurriculumType] = useState<string>('National Curriculum');
+  const [schoolGrade, setSchoolGrade] = useState<string>('');
+  const [schoolCEFR, setSchoolCEFR] = useState<string>('');
+  const [profileCurriculum, setProfileCurriculum] = useState<string>(CURRICULA[0]);
+  const [profileSchoolCurriculumType, setProfileSchoolCurriculumType] = useState<string>('National Curriculum');
   const [selectedStudentId, setSelectedStudentId] = useState<string>('none');
   const language = 'English';
   const [input, setInput] = useState('');
+  const [guidedTopic, setGuidedTopic] = useState('');
+  const [guidedVocab, setGuidedVocab] = useState('');
+  const [guidedGrammar, setGuidedGrammar] = useState('');
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [teacherRequest, setTeacherRequest] = useState('');
   const [generateSlides, setGenerateSlides] = useState(false);
   const [generateSlideScript, setGenerateSlideScript] = useState(false);
@@ -178,7 +192,15 @@ export default function App() {
 
   // Student Management State
   const [showAddStudent, setShowAddStudent] = useState(false);
-  const [newStudent, setNewStudent] = useState({ name: '', level: LEVELS[2], curriculum: CURRICULA[0] });
+  const [newStudent, setNewStudent] = useState({ 
+    name: '', 
+    level: LEVELS[2], 
+    curriculum: CURRICULA[0],
+    schoolCountry: 'Egypt',
+    schoolCurriculumType: 'National Curriculum',
+    schoolGrade: '',
+    schoolCEFR: ''
+  });
   const [selectedStudentProfile, setSelectedStudentProfile] = useState<Student | null>(null);
   
   // Generated Content Modal State
@@ -253,6 +275,10 @@ export default function App() {
 
   useEffect(() => {
     setInput('');
+    setGuidedTopic('');
+    setGuidedVocab('');
+    setGuidedGrammar('');
+    setImageBase64(null);
     setTeacherRequest('');
     setOutputSections(null);
     setError(null);
@@ -336,6 +362,10 @@ export default function App() {
       name: newStudent.name,
       level: newStudent.level,
       curriculum: newStudent.curriculum,
+      schoolCountry: newStudent.schoolCountry,
+      schoolCurriculumType: newStudent.schoolCurriculumType,
+      schoolGrade: newStudent.schoolGrade,
+      schoolCEFR: newStudent.schoolCEFR,
       weaknesses: [],
       notes: ''
     };
@@ -343,11 +373,23 @@ export default function App() {
     try {
       const newId = await addStudent(user.uid, studentData);
       setShowAddStudent(false);
-      setNewStudent({ name: '', level: LEVELS[2], curriculum: CURRICULA[0] });
+      setNewStudent({ 
+        name: '', 
+        level: LEVELS[2], 
+        curriculum: CURRICULA[0],
+        schoolCountry: 'Egypt',
+        schoolCurriculumType: 'National Curriculum',
+        schoolGrade: '',
+        schoolCEFR: ''
+      });
       if (currentPage !== 'students') {
         setSelectedStudentId(newId);
         setLevel(studentData.level);
         setCurriculum(studentData.curriculum);
+        setSchoolCountry(studentData.schoolCountry || 'Egypt');
+        setSchoolCurriculumType(studentData.schoolCurriculumType || 'National Curriculum');
+        setSchoolGrade(studentData.schoolGrade || '');
+        setSchoolCEFR(studentData.schoolCEFR || '');
       }
     } catch (err) {
       console.error("Error adding student:", err);
@@ -355,9 +397,32 @@ export default function App() {
     }
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageBase64(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!input.trim() || !activePageDef?.mode) return;
+    if (!activePageDef?.mode) return;
+
+    const isGuidedMode = ['lesson', 'activity', 'homework'].includes(activePageDef.mode);
+    
+    let finalInput = input;
+    if (isGuidedMode) {
+      if (!guidedTopic.trim() && !imageBase64) return;
+      finalInput = guidedTopic.trim() ? `Topic/Objective: ${guidedTopic}` : 'Topic/Objective: Extract from the provided image';
+      if (guidedVocab.trim()) finalInput += `\nTarget Vocabulary: ${guidedVocab}`;
+      if (guidedGrammar.trim()) finalInput += `\nTarget Grammar: ${guidedGrammar}`;
+    } else {
+      if (!input.trim() && !imageBase64) return;
+    }
 
     setIsLoading(true);
     setError(null);
@@ -368,14 +433,17 @@ export default function App() {
     try {
       const response = await generateTeacherResponse(
         activePageDef.mode, 
-        input, 
+        finalInput, 
         level, 
-        curriculum, 
+        curriculum === 'School / National / International Curriculum' 
+          ? `${curriculum} - Country: ${schoolCountry}, Type: ${schoolCurriculumType}, Grade: ${schoolGrade}, CEFR: ${schoolCEFR}`
+          : curriculum, 
         language,
         teacherProfile,
         studentContext,
         teacherRequest,
-        { generateSlides, generateSlideScript }
+        { generateSlides, generateSlideScript },
+        imageBase64 || undefined
       );
 
       let finalResponse = response;
@@ -423,7 +491,9 @@ export default function App() {
         mode,
         student.weaknesses.join(', ') || 'General English Practice',
         student.level,
-        student.curriculum,
+        student.curriculum === 'School / National / International Curriculum'
+          ? `${student.curriculum} - Country: ${student.schoolCountry}, Type: ${student.schoolCurriculumType}, Grade: ${student.schoolGrade}, CEFR: ${student.schoolCEFR}`
+          : student.curriculum,
         language,
         teacherProfile,
         student
@@ -599,6 +669,10 @@ export default function App() {
               country: formData.get('country') as string,
               teachingType: formData.get('teachingType') as string,
               curriculum: formData.get('curriculum') as string,
+              schoolCountry: formData.get('schoolCountry') as string,
+              schoolCurriculumType: formData.get('schoolCurriculumType') as string,
+              schoolGrade: formData.get('schoolGrade') as string,
+              schoolCEFR: formData.get('schoolCEFR') as string,
               levels: (formData.get('levels') as string).split(',').map(s => s.trim()).filter(Boolean),
               skills: (formData.get('skills') as string).split(',').map(s => s.trim()).filter(Boolean)
             };
@@ -651,10 +725,55 @@ export default function App() {
             
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-zinc-700">Curriculum</label>
-              <select name="curriculum" className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 outline-none">
+              <select 
+                name="curriculum" 
+                value={profileCurriculum}
+                onChange={(e) => setProfileCurriculum(e.target.value)}
+                className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 outline-none"
+              >
                 {CURRICULA.map(c => <option key={c}>{c}</option>)}
               </select>
             </div>
+
+            {profileCurriculum === 'School / National / International Curriculum' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 p-4 bg-zinc-50 border border-zinc-200 rounded-lg">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-zinc-700">School Country</label>
+                  <select name="schoolCountry" className="w-full bg-white border border-zinc-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 outline-none">
+                    <option>Egypt</option>
+                    <option>UAE</option>
+                    <option>Saudi Arabia</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-semibold text-zinc-700">Curriculum Type</label>
+                  <select 
+                    name="schoolCurriculumType" 
+                    value={profileSchoolCurriculumType}
+                    onChange={(e) => setProfileSchoolCurriculumType(e.target.value)}
+                    className="w-full bg-white border border-zinc-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 outline-none"
+                  >
+                    <option>National Curriculum</option>
+                    <option>British (IGCSE / Cambridge)</option>
+                    <option>American</option>
+                    <option>IB</option>
+                  </select>
+                </div>
+                {profileSchoolCurriculumType === 'National Curriculum' && (
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="text-sm font-semibold text-zinc-700">School Grade</label>
+                    <input name="schoolGrade" className="w-full bg-white border border-zinc-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 outline-none" placeholder="e.g., Grade 3, Prep 1, Secondary 2" />
+                  </div>
+                )}
+                {['British (IGCSE / Cambridge)', 'American', 'IB'].includes(profileSchoolCurriculumType) && (
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="text-sm font-semibold text-zinc-700">CEFR Level OR School Grade</label>
+                    <input name="schoolCEFR" className="w-full bg-white border border-zinc-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 outline-none" placeholder="e.g., B1, Grade 6" />
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-zinc-700">Student Levels (comma separated)</label>
@@ -1061,6 +1180,10 @@ export default function App() {
                           if (s) {
                             setLevel(s.level);
                             setCurriculum(s.curriculum);
+                            setSchoolCountry(s.schoolCountry || 'Egypt');
+                            setSchoolCurriculumType(s.schoolCurriculumType || 'National Curriculum');
+                            setSchoolGrade(s.schoolGrade || '');
+                            setSchoolCEFR(s.schoolCEFR || '');
                           }
                         }
                       }
@@ -1101,21 +1224,130 @@ export default function App() {
                     </select>
                   </div>
                 </div>
+                
+                {curriculum === 'School / National / International Curriculum' && (
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-zinc-700">Country</label>
+                      <select 
+                        value={schoolCountry} 
+                        onChange={(e) => setSchoolCountry(e.target.value)}
+                        disabled={selectedStudentId !== 'none'}
+                        className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition-all disabled:opacity-50"
+                      >
+                        <option>Egypt</option>
+                        <option>UAE</option>
+                        <option>Saudi Arabia</option>
+                        <option>Other</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-zinc-700">Curriculum Type</label>
+                      <select 
+                        value={schoolCurriculumType} 
+                        onChange={(e) => setSchoolCurriculumType(e.target.value)}
+                        disabled={selectedStudentId !== 'none'}
+                        className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition-all disabled:opacity-50"
+                      >
+                        <option>National Curriculum</option>
+                        <option>British (IGCSE / Cambridge)</option>
+                        <option>American</option>
+                        <option>IB</option>
+                      </select>
+                    </div>
+                    {schoolCurriculumType === 'National Curriculum' && (
+                      <div className="space-y-1.5 col-span-2">
+                        <label className="text-xs font-semibold text-zinc-700">School Grade</label>
+                        <input 
+                          value={schoolGrade} 
+                          onChange={(e) => setSchoolGrade(e.target.value)}
+                          disabled={selectedStudentId !== 'none'}
+                          placeholder="e.g., Grade 3, Prep 1, Secondary 2"
+                          className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition-all disabled:opacity-50"
+                        />
+                      </div>
+                    )}
+                    {['British (IGCSE / Cambridge)', 'American', 'IB'].includes(schoolCurriculumType) && (
+                      <div className="space-y-1.5 col-span-2">
+                        <label className="text-xs font-semibold text-zinc-700">CEFR Level OR School Grade</label>
+                        <input 
+                          value={schoolCEFR} 
+                          onChange={(e) => setSchoolCEFR(e.target.value)}
+                          disabled={selectedStudentId !== 'none'}
+                          placeholder="e.g., B1, Grade 6"
+                          className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition-all disabled:opacity-50"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
-            <div className="space-y-1.5 flex-1 flex flex-col">
+            {['lesson', 'activity', 'homework'].includes(activePageDef?.id || '') ? (
+              <div className="space-y-4 flex-1 flex flex-col">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-700">Topic / Main Objective <span className="text-zinc-500 font-normal">(Required unless image uploaded)</span></label>
+                  <input
+                    type="text"
+                    value={guidedTopic}
+                    onChange={(e) => setGuidedTopic(e.target.value)}
+                    placeholder="e.g., Unit 1: I feel good, Past Simple, etc."
+                    className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-700">Target Vocabulary (Optional)</label>
+                  <input
+                    type="text"
+                    value={guidedVocab}
+                    onChange={(e) => setGuidedVocab(e.target.value)}
+                    placeholder="e.g., digestive system, stomach, nutrients"
+                    className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-zinc-700">Target Grammar (Optional)</label>
+                  <input
+                    type="text"
+                    value={guidedGrammar}
+                    onChange={(e) => setGuidedGrammar(e.target.value)}
+                    placeholder="e.g., Present Simple, and/but"
+                    className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition-all"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5 flex-1 flex flex-col">
+                <label className="text-xs font-semibold text-zinc-700 flex items-center justify-between">
+                  <span>{activePageDef?.id === 'assistant' ? 'Your Question' : 'Input Content'}</span>
+                  <span className="text-zinc-400 font-normal">{input.length} chars</span>
+                </label>
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={activePageDef?.placeholder}
+                  className="w-full flex-1 min-h-[200px] bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition-all resize-none leading-relaxed"
+                />
+              </div>
+            )}
+
+            <div className="space-y-1.5 flex flex-col">
               <label className="text-xs font-semibold text-zinc-700 flex items-center justify-between">
-                <span>{activePageDef?.id === 'assistant' ? 'Your Question' : 'Input Content'}</span>
-                <span className="text-zinc-400 font-normal">{input.length} chars</span>
+                <span>Upload Book Page (Optional)</span>
               </label>
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={activePageDef?.placeholder}
-                className="w-full flex-1 min-h-[200px] bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm rounded-lg p-4 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition-all resize-none leading-relaxed"
-                required
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition-all file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-zinc-900 file:text-white hover:file:bg-zinc-800"
               />
+              {imageBase64 && (
+                <div className="mt-2 text-xs text-green-600 font-medium flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                  Image uploaded successfully
+                </div>
+              )}
             </div>
 
             {(activePageDef?.id === 'correction' || activePageDef?.id === 'score') && (
@@ -1168,7 +1400,7 @@ export default function App() {
                 {activePageDef?.id === 'assistant' ? (
                   <><strong>Context Reminder:</strong> The AI will answer your question based on your teaching profile and general best practices.</>
                 ) : (
-                  <><strong>Context Reminder:</strong> You are teaching {selectedStudentId !== 'none' ? <span className="font-semibold">{students.find(s => s.id === selectedStudentId)?.name} ({level})</span> : <span className="font-semibold">{level} level students</span>} using the <span className="font-semibold">{curriculum}</span>. The AI will automatically adapt this {activePageDef?.label.toLowerCase()} to your context.</>
+                  <><strong>Context Reminder:</strong> You are teaching {selectedStudentId !== 'none' ? <span className="font-semibold">{students.find(s => s.id === selectedStudentId)?.name} ({level})</span> : <span className="font-semibold">{level} level students</span>} using the <span className="font-semibold">{curriculum === 'School / National / International Curriculum' ? `${schoolCountry} ${schoolCurriculumType}` : curriculum}</span>. The AI will automatically adapt this {activePageDef?.label.toLowerCase()} to your context.</>
                 )}
               </p>
             </div>
@@ -1439,6 +1671,60 @@ export default function App() {
                       {CURRICULA.map(c => <option key={c}>{c}</option>)}
                     </select>
                   </div>
+                  
+                  {newStudent.curriculum === 'School / National / International Curriculum' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-zinc-700">Country</label>
+                        <select 
+                          value={newStudent.schoolCountry} 
+                          onChange={(e) => setNewStudent({...newStudent, schoolCountry: e.target.value})}
+                          className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-zinc-900/20 outline-none"
+                        >
+                          <option>Egypt</option>
+                          <option>UAE</option>
+                          <option>Saudi Arabia</option>
+                          <option>Other</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-semibold text-zinc-700">Curriculum Type</label>
+                        <select 
+                          value={newStudent.schoolCurriculumType} 
+                          onChange={(e) => setNewStudent({...newStudent, schoolCurriculumType: e.target.value})}
+                          className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-zinc-900/20 outline-none"
+                        >
+                          <option>National Curriculum</option>
+                          <option>British (IGCSE / Cambridge)</option>
+                          <option>American</option>
+                          <option>IB</option>
+                        </select>
+                      </div>
+                      {newStudent.schoolCurriculumType === 'National Curriculum' && (
+                        <div className="space-y-1.5 col-span-2">
+                          <label className="text-xs font-semibold text-zinc-700">School Grade</label>
+                          <input 
+                            value={newStudent.schoolGrade} 
+                            onChange={(e) => setNewStudent({...newStudent, schoolGrade: e.target.value})}
+                            placeholder="e.g., Grade 3, Prep 1, Secondary 2"
+                            className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-zinc-900/20 outline-none"
+                          />
+                        </div>
+                      )}
+                      {['British (IGCSE / Cambridge)', 'American', 'IB'].includes(newStudent.schoolCurriculumType) && (
+                        <div className="space-y-1.5 col-span-2">
+                          <label className="text-xs font-semibold text-zinc-700">CEFR Level OR School Grade</label>
+                          <input 
+                            value={newStudent.schoolCEFR} 
+                            onChange={(e) => setNewStudent({...newStudent, schoolCEFR: e.target.value})}
+                            placeholder="e.g., B1, Grade 6"
+                            className="w-full bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-zinc-900/20 outline-none"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   <div className="pt-2 flex gap-3">
                     <button type="submit" className="flex-1 bg-zinc-900 text-white px-4 py-2 rounded-lg text-sm font-medium h-[38px] shadow-[0_3px_0_0_#27272a] hover:-translate-y-0.5 hover:shadow-[0_4px_0_0_#27272a] active:translate-y-[3px] active:shadow-[0_0px_0_0_#27272a] transition-all">Save Student</button>
                     <button type="button" onClick={() => setShowAddStudent(false)} className="flex-1 bg-white border border-zinc-200 text-zinc-700 px-4 py-2 rounded-lg text-sm font-medium h-[38px] hover:bg-zinc-50 transition-colors">Cancel</button>

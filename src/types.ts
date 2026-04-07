@@ -4,6 +4,10 @@ export interface TeacherProfile {
   country: string;
   teachingType: string;
   curriculum: string;
+  schoolCountry?: string;
+  schoolCurriculumType?: string;
+  schoolGrade?: string;
+  schoolCEFR?: string;
   levels: string[];
   skills: string[];
 }
@@ -20,6 +24,10 @@ export interface Student {
   name: string;
   level: string;
   curriculum: string;
+  schoolCountry?: string;
+  schoolCurriculumType?: string;
+  schoolGrade?: string;
+  schoolCEFR?: string;
   weaknesses: string[];
   notes: string;
   history: WritingEntry[];

@@ -40,6 +40,10 @@ service cloud.firestore {
              validStringLength('country', 1, 100) &&
              validStringLength('teachingType', 1, 50) &&
              validStringLength('curriculum', 1, 100) &&
+             (!('schoolCountry' in request.resource.data) || (request.resource.data.schoolCountry is string && request.resource.data.schoolCountry.size() <= 100)) &&
+             (!('schoolCurriculumType' in request.resource.data) || (request.resource.data.schoolCurriculumType is string && request.resource.data.schoolCurriculumType.size() <= 100)) &&
+             (!('schoolGrade' in request.resource.data) || (request.resource.data.schoolGrade is string && request.resource.data.schoolGrade.size() <= 100)) &&
+             (!('schoolCEFR' in request.resource.data) || (request.resource.data.schoolCEFR is string && request.resource.data.schoolCEFR.size() <= 100)) &&
              request.resource.data.levels is list && request.resource.data.levels.size() <= 20 &&
              request.resource.data.skills is list && request.resource.data.skills.size() <= 20;
     }
@@ -56,6 +60,10 @@ service cloud.firestore {
              validStringLength('name', 1, 100) &&
              validStringLength('level', 1, 50) &&
              validStringLength('curriculum', 1, 100) &&
+             (!('schoolCountry' in request.resource.data) || (request.resource.data.schoolCountry is string && request.resource.data.schoolCountry.size() <= 100)) &&
+             (!('schoolCurriculumType' in request.resource.data) || (request.resource.data.schoolCurriculumType is string && request.resource.data.schoolCurriculumType.size() <= 100)) &&
+             (!('schoolGrade' in request.resource.data) || (request.resource.data.schoolGrade is string && request.resource.data.schoolGrade.size() <= 100)) &&
+             (!('schoolCEFR' in request.resource.data) || (request.resource.data.schoolCEFR is string && request.resource.data.schoolCEFR.size() <= 100)) &&
              (!('weaknesses' in request.resource.data) || (request.resource.data.weaknesses is list && request.resource.data.weaknesses.size() <= 50)) &&
              (!('notes' in request.resource.data) || (request.resource.data.notes is string && request.resource.data.notes.size() <= 5000)) &&
              (!('history' in request.resource.data) || (request.resource.data.history is list && request.resource.data.history.size() <= 1000));
