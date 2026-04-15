@@ -1213,7 +1213,7 @@ export default function App() {
             />
             <button
               type="submit"
-              disabled={isChatLoading || !chatInput.trim()}
+              disabled={isChatLoading}
               className="bg-zinc-900 text-white px-5 py-3.5 rounded-xl text-sm font-medium hover:bg-zinc-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-sm"
             >
               <Send className="w-4 h-4" />
@@ -1485,7 +1485,7 @@ export default function App() {
 
             <button
               type="submit"
-              disabled={isLoading || !input.trim()}
+              disabled={isLoading}
               className="w-full bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-3.5 rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_4px_0_0_#27272a] hover:-translate-y-0.5 hover:shadow-[0_5px_0_0_#27272a] active:translate-y-[4px] active:shadow-[0_0px_0_0_#27272a]"
             >
               {isLoading ? (
