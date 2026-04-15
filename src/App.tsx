@@ -132,6 +132,12 @@ const ResultCard = ({ title, content }: { title: string, content: string }) => {
   );
 };
 
+const VALID_ACCESS_CODES = [
+  'NOVA-731', 'LUMEN-482', 'ZENTO-915', 'ORBIT-604', 'VELAR-278',
+  'KYRO-553', 'AXION-839', 'SERIX-126', 'NEVIO-447', 'TORIN-390',
+  'ALTO-662', 'VEXA-914', 'NIRU-508', 'ELVO-377', 'RIXEN-245'
+];
+
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -168,7 +174,20 @@ export default function App() {
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authError, setAuthError] = useState('');
+  
+  const [isAccessGranted, setIsAccessGranted] = useState(() => {
+    const savedCode = localStorage.getItem('tutorEngMate_accessCode');
+    return savedCode ? VALID_ACCESS_CODES.includes(savedCode) : false;
+  });
+  const [accessCodeInput, setAccessCodeInput] = useState('');
+  const [accessError, setAccessError] = useState('');
+  const [generationCount, setGenerationCount] = useState(0);
+  const MAX_GENERATIONS = 5;
+
   const sendMessageToAI = async (userMessage: string) => {
+    if (generationCount >= MAX_GENERATIONS) {
+      return "You have reached the demo limit. Contact us for full access.\n\n---\n*Developed by Nora Ebrahim Abu Zeid*";
+    }
     try {
       const { GoogleGenAI } = await import("@google/genai");
       const { getApiKey } = await import("./services/geminiService");
@@ -183,7 +202,8 @@ export default function App() {
         model: "gemini-3-flash-preview",
         contents: userMessage,
       });
-      return response.text || "No response from AI.";
+      setGenerationCount(prev => prev + 1);
+      return (response.text || "No response from AI.") + "\n\n---\n*Developed by Nora Ebrahim Abu Zeid*";
     } catch (error) {
       console.error("Error:", error);
       return "Error getting response";
@@ -412,6 +432,11 @@ export default function App() {
     if (e) e.preventDefault();
     if (!activePageDef?.mode) return;
 
+    if (generationCount >= MAX_GENERATIONS) {
+      setError("You have reached the demo limit. Contact us for full access.");
+      return;
+    }
+
     const isGuidedMode = ['lesson', 'activity', 'homework'].includes(activePageDef.mode);
     
     let finalInput = input;
@@ -447,6 +472,7 @@ export default function App() {
       );
 
       let finalResponse = response;
+      finalResponse += "\n\n---\n*Developed by Nora Ebrahim Abu Zeid*";
       let extractedScore = 0;
       let extractedWeaknesses: string[] = [];
 
@@ -477,6 +503,7 @@ export default function App() {
 
       const sections = parseMarkdownIntoSections(finalResponse);
       setOutputSections(sections);
+      setGenerationCount(prev => prev + 1);
     } catch (err: any) {
       setError(err.message || 'An error occurred while generating the response.');
     } finally {
@@ -485,6 +512,10 @@ export default function App() {
   };
 
   const handleGenerateStudentContent = async (student: Student, mode: string) => {
+    if (generationCount >= MAX_GENERATIONS) {
+      alert("You have reached the demo limit. Contact us for full access.");
+      return;
+    }
     setIsGeneratingStudentContent(true);
     try {
       const response = await generateTeacherResponse(
@@ -500,6 +531,7 @@ export default function App() {
       );
       
       let finalResponse = response;
+      finalResponse += "\n\n---\n*Developed by Nora Ebrahim Abu Zeid*";
       // Clean up any stray tags if they exist
       finalResponse = finalResponse.replace(/\[SCORE:\s*(\d+)\]/gi, '').replace(/\[WEAKNESSES:\s*(.+?)\]/gi, '');
       
@@ -507,6 +539,7 @@ export default function App() {
         title: mode === 'smart_practice' ? 'Smart Practice' : mode === 'improvement_plan' ? 'Improvement Plan' : 'Student Report', 
         content: finalResponse 
       });
+      setGenerationCount(prev => prev + 1);
     } catch (err: any) {
       console.error(err);
       alert('Failed to generate content: ' + err.message);
@@ -528,6 +561,51 @@ export default function App() {
     return (
       <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
+
+  if (!isAccessGranted) {
+    return (
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-zinc-200 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-zinc-900 text-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-md">
+            <BookOpen size={32} />
+          </div>
+          <h1 className="text-2xl font-bold text-zinc-900 mb-2">Welcome to TutorEngMate AI</h1>
+          <p className="text-zinc-500 mb-8">This is a demo version for evaluation purposes.</p>
+          
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const code = accessCodeInput.trim();
+            if (VALID_ACCESS_CODES.includes(code)) {
+              setIsAccessGranted(true);
+              localStorage.setItem('tutorEngMate_accessCode', code);
+            } else {
+              setAccessError('Invalid code. Please try again.');
+            }
+          }} className="space-y-4">
+            <div>
+              <input
+                type="text"
+                value={accessCodeInput}
+                onChange={(e) => {
+                  setAccessCodeInput(e.target.value);
+                  setAccessError('');
+                }}
+                placeholder="Enter your access code to continue"
+                className="w-full bg-zinc-50 border border-zinc-200 text-zinc-900 text-sm rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition-all text-center"
+              />
+              {accessError && <p className="text-red-500 text-xs mt-2">{accessError}</p>}
+            </div>
+            <button type="submit" className="w-full bg-zinc-900 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-zinc-800 transition-all">
+              Continue
+            </button>
+          </form>
+          <div className="mt-8 text-xs text-zinc-400">
+            Developed by Nora Ebrahim Abu Zeid
+          </div>
+        </div>
       </div>
     );
   }
@@ -1552,7 +1630,20 @@ export default function App() {
           })}
         </div>
 
-        <div className="p-4 border-t border-zinc-200 shrink-0">
+        <div className="p-4 border-t border-zinc-200 shrink-0 space-y-2">
+          <button 
+            onClick={() => {
+              localStorage.removeItem('tutorEngMate_accessCode');
+              setIsAccessGranted(false);
+              setAccessCodeInput('');
+            }} 
+            className="w-full flex items-center gap-3 px-3 py-2 hover:bg-zinc-50 rounded-lg transition-colors text-left text-zinc-600 hover:text-red-600"
+          >
+            <div className="w-6 h-6 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </div>
+            <span className="text-sm font-medium">Lock App</span>
+          </button>
           <button onClick={logout} className="w-full flex items-center gap-3 px-2 py-2 hover:bg-zinc-50 rounded-lg transition-colors text-left group">
             <div className="w-8 h-8 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-600">
               {user?.photoURL ? (
@@ -1622,13 +1713,19 @@ export default function App() {
         </header>
 
         {/* Scrollable Page Content */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar relative">
-          <AnimatePresence mode="wait">
-            {currentPage === 'dashboard' ? renderDashboard() : 
-             currentPage === 'students' ? renderStudentsPage() : 
-             currentPage === 'assistant' ? renderAssistantChat() :
-             renderWorkspace()}
-          </AnimatePresence>
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar relative flex flex-col">
+          <div className="flex-1">
+            <AnimatePresence mode="wait">
+              {currentPage === 'dashboard' ? renderDashboard() : 
+               currentPage === 'students' ? renderStudentsPage() : 
+               currentPage === 'assistant' ? renderAssistantChat() :
+               renderWorkspace()}
+            </AnimatePresence>
+          </div>
+          
+          <div className="mt-12 pt-6 border-t border-zinc-200/60 text-center text-xs font-medium text-zinc-400">
+            Developed by Nora Ebrahim Abu Zeid
+          </div>
         </main>
       </div>
 
