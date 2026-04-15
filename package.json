@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.46.0",
+    "@tailwindcss/typography": "^0.5.19",
     "@types/archiver": "^7.0.0",
     "archiver": "^7.0.1",
     "express": "^4.18.2",
